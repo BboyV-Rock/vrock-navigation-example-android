@@ -1,6 +1,5 @@
 package com.vrock.navigationexample
 
-import android.os.SystemClock
 import android.view.LayoutInflater
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +57,11 @@ internal fun InlineTrip(
     var failed by remember(attempt) { mutableStateOf(false) }
     val locations = remember(attempt) { Channel<NavigationLocation>(Channel.BUFFERED) }
 
+    val scope = rememberCoroutineScope()
+    val simulator = remember(locations, scope) {
+        TapLocationSimulator(scope) { locations.trySend(it).isSuccess }
+    }
+
     LaunchedEffect(locations) {
         try {
             val locationProvider = if (config.simulateByTap) {
@@ -81,6 +86,7 @@ internal fun InlineTrip(
         } catch (_: Exception) {
             failed = true
         } finally {
+            simulator.reset()
             locations.cancel()
         }
     }
@@ -109,10 +115,8 @@ internal fun InlineTrip(
         return
     }
 
-    val simulatePosition: (NavigationCoordinate) -> Unit = { coordinate ->
-        locations.trySend(NavigationLocation(coordinate, SystemClock.elapsedRealtime(), 5f, 11.176))
-    }
-    val onMapTap = simulatePosition.takeIf { config.simulateByTap }
+    val onMapTap: ((NavigationCoordinate) -> Unit)? =
+        if (config.simulateByTap) simulator::tap else null
     val hint = if (config.simulateByTap) stringResource(R.string.simulation_hint) else null
     val colors = config.appearance.colors
     val mapFactory = remember(config.provider, config.mapTheme) { config.tripMapFactory() }
@@ -141,6 +145,7 @@ internal fun InlineTrip(
                         waitingMessage = hint,
                         colors = colors,
                         uiConfig = uiConfig,
+                        destinationMarker = config.appearance.destinationMarker,
                         mapFactory = mapFactory,
                     )
                 },
@@ -156,6 +161,7 @@ internal fun InlineTrip(
                 waitingMessage = hint,
                 colors = colors,
                 uiConfig = uiConfig,
+                destinationMarker = config.appearance.destinationMarker,
                 mapFactory = mapFactory,
             )
         }

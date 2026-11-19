@@ -28,6 +28,7 @@ import com.google.android.gms.maps.model.PolylineOptions
 import com.vrock.navigation.core.NavigationCoordinate
 import com.vrock.navigation.map.MapThemeConfig
 import com.vrock.navigation.map.google.GoogleMapThemeController
+import com.vrock.navigation.map.google.GoogleMapStyles
 
 @Composable
 internal fun GoogleRouteMap(
@@ -37,6 +38,7 @@ internal fun GoogleRouteMap(
     routeColor: Int,
     initialCenter: NavigationCoordinate,
     theme: MapThemeConfig,
+    styles: GoogleMapStyles,
     onPointSelected: (NavigationCoordinate) -> Unit,
 ) {
     val context = LocalContext.current
@@ -106,8 +108,8 @@ internal fun GoogleRouteMap(
 
     AndroidView(modifier = modifier, factory = { mapView })
 
-    DisposableEffect(map, lifecycle, theme) {
-        val controller = map?.let { GoogleMapThemeController(context, lifecycle, it, theme, exampleGoogleMapStyles) }
+    DisposableEffect(map, lifecycle, theme, styles) {
+        val controller = map?.let { GoogleMapThemeController(context, lifecycle, it, theme, styles) }
         onDispose { controller?.close() }
     }
 

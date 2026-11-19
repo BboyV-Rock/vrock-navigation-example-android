@@ -18,7 +18,10 @@ import androidx.compose.runtime.setValue
 import com.vrock.navigation.core.NavigationCoordinate
 import com.vrock.navigation.core.NavigationRoute
 import com.vrock.navigation.core.RouteRequest
+import com.vrock.navigation.map.MapStylePreset
 import com.vrock.navigation.map.MapThemeConfig
+import com.vrock.navigation.routing.OsrmRoutingException
+import com.vrock.navigation.ui.NavigationColors
 import com.vrock.navigation.sdk.NavigationState
 import com.vrock.navigation.ui.NavigationUiConfig
 import com.vrock.navigation.ui.view.NavigationActivity
@@ -30,6 +33,7 @@ import com.vrock.navigation.ui.view.NavigationRoutePoints
 import com.vrock.navigationexample.ui.theme.VRockNavigationExampleTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.emptyFlow
+import kotlin.time.Duration.Companion.milliseconds
 
 internal val demoPoints = NavigationRoutePoints(
     origin = NavigationCoordinate(42.8864, -78.8784),
@@ -55,8 +59,12 @@ class MainActivity : ComponentActivity() {
                 var provider by rememberSaveable { mutableStateOf(NavigationProvider.OSRM) }
                 var points by rememberSaveable { mutableStateOf(arrayListOf<NavigationCoordinate>()) }
                 var showTripSettings by rememberSaveable { mutableStateOf(false) }
-                var mapTheme by rememberSaveable { mutableStateOf(MapThemeConfig()) }
+                var mapTheme by rememberSaveable { mutableStateOf(MapThemeConfig(preset = MapStylePreset.entries.firstOrNull {
+                    it.name == palette.getString("map_preset", palette.getString("google_map_preset", null))
+                } ?: MapStylePreset.STANDARD)) }
                 var appStopsTrip by rememberSaveable { mutableStateOf(false) }
+                var adaptiveZoom by rememberSaveable { mutableStateOf(true) }
+                var showDestination by rememberSaveable { mutableStateOf(true) }
                 var recenterEnabled by rememberSaveable { mutableStateOf(true) }
                 var stopHostedTrip by rememberSaveable { mutableStateOf(false) }
                 val hostedTrip = rememberLauncherForActivityResult(
@@ -64,7 +72,7 @@ class MainActivity : ComponentActivity() {
                 ) { stopHostedTrip = false }
                 LaunchedEffect(stopHostedTrip) {
                     if (stopHostedTrip) {
-                        delay(20_000)
+                        delay(20_000.milliseconds)
                         NavigationController.stopNavigation()
                         stopHostedTrip = false
                     }
@@ -75,13 +83,18 @@ class MainActivity : ComponentActivity() {
                 var permissionDenied by rememberSaveable { mutableStateOf(false) }
                 var buildingRoute by remember(points, provider) { mutableStateOf(false) }
                 var previewRoute by remember(points, provider) { mutableStateOf<NavigationRoute?>(null) }
-                var routeFailed by remember(points, provider) { mutableStateOf(false) }
+                var routeError by remember(points, provider) { mutableStateOf<String?>(null) }
 
                 val config = NavigationLaunchConfig(
                     provider = provider,
                     appearance = NavigationAppearance(
-                        colors = colors,
+                        colors = if (mapTheme.preset == MapStylePreset.GAME_RADAR) {
+                            val radar = NavigationColors.gameRadar()
+                            colors.copy(route = radar.route, position = radar.position, positionOutline = radar.positionOutline)
+                        } else colors,
                         uiConfig = NavigationUiConfig(
+                            adaptiveZoomEnabled = adaptiveZoom,
+                            showDestinationMarker = showDestination,
                             showRecenterButton = recenterEnabled,
                             showEndTripButton = !appStopsTrip,
                             allowBackToEndTrip = !appStopsTrip,
@@ -104,7 +117,13 @@ class MainActivity : ComponentActivity() {
                     val navigation = app.createNavigation(config) { emptyFlow() }
                     navigation.requestRoute(RouteRequest(routePoints.origin, routePoints.destination, routePoints.waypoints))
                     previewRoute = (navigation.state.value as? NavigationState.RouteReady)?.route
-                    routeFailed = previewRoute == null
+                    val cause = (navigation.state.value as? NavigationState.Error)?.cause
+                    routeError = if (previewRoute != null) null else when (cause) {
+                        is OsrmRoutingException -> cause.message ?: getString(R.string.preview_route_failed)
+                        is java.net.UnknownHostException -> getString(R.string.preview_route_dns)
+                        is java.net.SocketTimeoutException -> getString(R.string.preview_route_timeout)
+                        else -> getString(R.string.preview_route_failed)
+                    }
                     buildingRoute = false
                 }
 
@@ -112,8 +131,13 @@ class MainActivity : ComponentActivity() {
                 when {
                     showTripSettings -> {
                         BackHandler { showTripSettings = false }
-                        TripSettings(mapTheme, appStopsTrip, recenterEnabled, onCancel = { showTripSettings = false }) {
-                            theme, stopFromApp, recenter ->
+                        TripSettings(
+                            mapTheme, appStopsTrip, recenterEnabled, adaptiveZoom, showDestination,
+                            onCancel = { showTripSettings = false },
+                        ) { theme, stopFromApp, recenter, zoom, destination ->
+                            palette.edit().putString("map_preset", theme.preset.name).apply()
+                            adaptiveZoom = zoom
+                            showDestination = destination
                             mapTheme = theme
                             appStopsTrip = stopFromApp
                             recenterEnabled = recenter
@@ -137,13 +161,13 @@ class MainActivity : ComponentActivity() {
                         points = points,
                         route = previewRoute,
                         buildingRoute = buildingRoute,
-                        routeFailed = routeFailed,
+                        routeError = routeError,
                         permissionDenied = permissionDenied,
                         onScreenSelected = { screen = it },
                         onProviderSelected = { provider = it },
                         onPointsChanged = { points = ArrayList(it) },
                         onBuild = {
-                            routeFailed = false
+                            routeError = null
                             buildingRoute = true
                         },
                         onSettings = { showSettings = true },

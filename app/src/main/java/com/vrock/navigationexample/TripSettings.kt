@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.vrock.navigation.map.MapStylePreset
 import com.vrock.navigation.map.MapThemeConfig
 import com.vrock.navigation.map.MapThemeMode
 import com.vrock.navigation.map.MapThemeSchedule
@@ -34,14 +35,19 @@ internal fun TripSettings(
     theme: MapThemeConfig,
     appStopsTrip: Boolean,
     recenterEnabled: Boolean,
+    adaptiveZoomEnabled: Boolean,
+    showDestinationMarker: Boolean,
     onCancel: () -> Unit,
-    onSave: (MapThemeConfig, Boolean, Boolean) -> Unit,
+    onSave: (MapThemeConfig, Boolean, Boolean, Boolean, Boolean) -> Unit,
 ) {
+    var preset by rememberSaveable { mutableStateOf(theme.preset) }
     var mode by rememberSaveable { mutableStateOf(theme.mode) }
     var darkStartsAt by rememberSaveable { mutableStateOf(theme.schedule.darkStartsAt.toString()) }
     var darkEndsAt by rememberSaveable { mutableStateOf(theme.schedule.darkEndsAt.toString()) }
     var stopFromApp by rememberSaveable { mutableStateOf(appStopsTrip) }
     var recenter by rememberSaveable { mutableStateOf(recenterEnabled) }
+    var adaptiveZoom by rememberSaveable { mutableStateOf(adaptiveZoomEnabled) }
+    var showDestination by rememberSaveable { mutableStateOf(showDestinationMarker) }
     val start = runCatching { LocalTime.parse(darkStartsAt) }.getOrNull()
     val end = runCatching { LocalTime.parse(darkEndsAt) }.getOrNull()
 
@@ -51,6 +57,19 @@ internal fun TripSettings(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(stringResource(R.string.trip_settings), style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.map_style), style = MaterialTheme.typography.titleMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MapStylePreset.entries.forEach { option ->
+                    FilterChip(
+                        selected = preset == option,
+                        onClick = { preset = option },
+                        label = { Text(stringResource(
+                            if (option == MapStylePreset.STANDARD) R.string.map_style_standard else R.string.map_style_radar,
+                        )) },
+                    )
+                }
+            }
+            Text(stringResource(R.string.map_style_radar_help))
             Text(stringResource(R.string.map_theme), style = MaterialTheme.typography.titleMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MapThemeMode.entries.forEach { option ->
@@ -83,6 +102,8 @@ internal fun TripSettings(
                     isError = end == null,
                 )
             }
+            TripSwitch(R.string.adaptive_zoom, adaptiveZoom) { adaptiveZoom = it }
+            TripSwitch(R.string.destination_marker, showDestination) { showDestination = it }
             TripSwitch(R.string.trip_recenter, recenter) { recenter = it }
             TripSwitch(R.string.stop_from_app, stopFromApp) { stopFromApp = it }
             if (stopFromApp) Text(stringResource(R.string.stop_from_app_help))
@@ -92,7 +113,7 @@ internal fun TripSettings(
                     enabled = mode != MapThemeMode.AUTO || (start != null && end != null),
                     onClick = {
                         val schedule = if (start != null && end != null) MapThemeSchedule(start, end) else theme.schedule
-                        onSave(MapThemeConfig(mode, schedule), stopFromApp, recenter)
+                        onSave(theme.copy(mode = mode, schedule = schedule, preset = preset), stopFromApp, recenter, adaptiveZoom, showDestination)
                     },
                 ) { Text(stringResource(R.string.save_palette)) }
             }

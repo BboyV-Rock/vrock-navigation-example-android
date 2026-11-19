@@ -56,4 +56,12 @@
     <string name="stop_from_app">Stop from app</string>
     <string name="stop_from_app_help">Hides the SDK End trip button and disables Back. The standalone Activity stops after 20 seconds. Compose, XML and Fragment show an app-owned stop button.</string>
     <string name="color_screen_background">Screen background (optional)</string>
+    <string name="map_style">Map style</string>
+    <string name="map_style_standard">Standard</string>
+    <string name="map_style_radar">Game radar</string>
+    <string name="map_style_radar_help">Game radar uses the SDK palette and a cyan route on Google Maps and MapLibre.</string>
+    <string name="adaptive_zoom">Adaptive zoom</string>
+    <string name="destination_marker">Show destination marker</string>
+    <string name="preview_route_dns">Could not resolve the routing server. Check your connection.</string>
+    <string name="preview_route_timeout">The routing server timed out. Try again.</string>
 </resources>

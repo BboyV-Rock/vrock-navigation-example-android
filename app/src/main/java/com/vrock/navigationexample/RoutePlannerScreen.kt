@@ -44,7 +44,7 @@ internal fun RoutePlannerScreen(
     points: List<NavigationCoordinate>,
     route: NavigationRoute?,
     buildingRoute: Boolean,
-    routeFailed: Boolean,
+    routeError: String?,
     permissionDenied: Boolean,
     onScreenSelected: (TripScreen) -> Unit,
     onProviderSelected: (NavigationProvider) -> Unit,
@@ -75,7 +75,7 @@ internal fun RoutePlannerScreen(
                         }
                     }
                     config.provider == NavigationProvider.GOOGLE -> GoogleRouteMap(
-                        modifier, points, geometry, colors.route, demoPoints.origin, config.mapTheme, selectPoint,
+                        modifier, points, geometry, colors.route, demoPoints.origin, config.mapTheme, config.mapTheme.preset.googleStyles(), selectPoint,
                     )
                     else -> NavigationMap(
                         styleUrl = config.styleUrl,
@@ -86,7 +86,7 @@ internal fun RoutePlannerScreen(
                         initialCenter = demoPoints.origin,
                         routeColor = colors.route,
                         theme = config.mapTheme,
-                        styles = exampleMapLibreStyles,
+                        styles = config.mapTheme.preset.libreStyles(),
                     )
                 }
             }
@@ -113,7 +113,7 @@ internal fun RoutePlannerScreen(
                         }
                     }
                     if (buildingRoute) Text(stringResource(R.string.building_route))
-                    if (routeFailed) Text(stringResource(R.string.preview_route_failed), color = MaterialTheme.colorScheme.error)
+                    if (routeError != null) Text(routeError, color = MaterialTheme.colorScheme.error)
                     if (permissionDenied) Text(stringResource(R.string.precise_location_required), color = MaterialTheme.colorScheme.error)
                     FlowRow {
                         TextButton(
@@ -181,7 +181,7 @@ private fun RoutePlannerPreview() {
             points = listOf(demoPoints.origin, demoPoints.destination),
             route = null,
             buildingRoute = false,
-            routeFailed = false,
+            routeError = null,
             permissionDenied = false,
             onScreenSelected = {},
             onProviderSelected = {},

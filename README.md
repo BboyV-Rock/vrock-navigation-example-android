@@ -1,10 +1,10 @@
 # VRock Navigation Example
 
-A standalone Android app that consumes VRock Navigation SDK 0.1.2 as Maven packages. It uses a Compose launcher and four SDK navigation integrations for the same demo route.
+A standalone Android app that consumes VRock Navigation SDK 0.1.4 as Maven packages. It uses a Compose launcher and four SDK navigation integrations for the same demo route.
 
 ## Quick start
 
-Install Android SDK Platform 37. Gradle downloads the SDK from the public VRock Maven repository on GitHub Pages. Downloads are anonymous.
+Install Android SDK Platform 37.2. Gradle downloads the SDK from the public VRock Maven repository on GitHub Pages. Downloads are anonymous.
 
 Clone the example, open it in Android Studio, sync Gradle and run the **debug** variant. To build from the command line:
 
@@ -52,7 +52,7 @@ Use **Build route** to preview the route. Select **GPS** to follow the device po
 
 [app/secrets.properties](app/secrets.properties) documents the Google key setting. With `GOOGLE_API_KEY` empty, the example runs in OSRM mode and the Google start buttons stay disabled. To test Google in your own copy, set `GOOGLE_API_KEY` in that file and rebuild. Enable Maps SDK for Android and Routes API for the key. The Android app ID is `com.vrock.navigationexample`.
 
-## Try the changes in SDK 0.1.2
+## Try the changes in SDK 0.1.4
 
 1. Open **Map and trip controls**, select **Dark**, then save. The planner map changes theme. Start any of the four trip screens to see the themed navigation UI. Choose **Auto** to try a schedule using the device clock. The default dark hours are 19:00–07:00.
 2. Open **Navigation colors** to set an optional screen background. Leave it blank for the SDK default. Night mode changes the default map controls, and an explicitly customized button palette takes precedence.
@@ -414,3 +414,11 @@ AndroidView(
 ### Open the Compose previews
 
 Select the `debug` build variant in Android Studio. Open `RoutePlannerScreen.kt`, `PaletteSettings.kt` or [ComposeTripPreview.kt](app/src/debug/java/com/vrock/navigationexample/ComposeTripPreview.kt) and switch the editor to **Split** or **Design**. The trip preview uses a static placeholder for the map.
+
+## Game radar, adaptive zoom and destination markers
+
+Open **Map and trip controls** and choose **Game radar** for Google Maps or MapLibre. The SDK supplies the day and night styles and the cyan route palette. The route fades near the vehicle during navigation. The app saves the preset across restarts.
+
+In the same settings, turn **Adaptive zoom** or **Show destination marker** on or off. Adaptive zoom follows vehicle speed while the camera follows the marker. To customize the finish marker in code, pass `DestinationMarkerStyle(backgroundColor = 0xFF5145B8.toInt(), sizeDp = 40)` to `NavigationAppearance.destinationMarker`. Activity and Fragment read it from the launch config. Compose and XML pass it to their renderers.
+
+In **Tap to drive**, speed depends on the distance and time between taps. After two seconds without a tap, speed returns to zero. Tap forward along the route, then pause to see the adaptive camera move closer again.
