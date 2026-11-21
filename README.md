@@ -50,7 +50,7 @@ Select **OSRM** (with MapLibre) or **Google** (Google Routes and Google Maps). T
 
 Use **Build route** to preview the route. Select **GPS** to follow the device position. Allow precise location, turn on GPS and choose a start near your current position. Select **Tap to drive** to simulate position by tapping along the route. Both modes work with all four trip screens. Routing and map tiles need internet access. The public OSRM endpoint is for evaluation, and the debug app runs without a VRock activation key.
 
-[app/secrets.properties](app/secrets.properties) documents the Google key setting. With `GOOGLE_API_KEY` empty, the example runs in OSRM mode and the Google start buttons stay disabled. To test Google in your own copy, set `GOOGLE_API_KEY` in that file and rebuild. Enable Maps SDK for Android and Routes API for the key. The Android app ID is `com.vrock.navigationexample`.
+The example runs in OSRM mode by default. To try Google, copy [app/secrets.properties.example](app/secrets.properties.example) to `app/secrets.properties`, set `GOOGLE_API_KEY`, and rebuild. Git ignores the local file. Google start buttons stay disabled until a key is configured. Enable Maps SDK for Android and Routes API for the key. The Android app ID is `com.vrock.navigationexample`.
 
 ## Try the changes in SDK 0.1.5
 

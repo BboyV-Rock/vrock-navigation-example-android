@@ -12,3 +12,5 @@ build/
 *.keystore
 
 /app/vrock-license.properties
+
+/app/secrets.properties
