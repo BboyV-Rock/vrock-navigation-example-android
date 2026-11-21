@@ -8,6 +8,7 @@ build/
 .externalNativeBuild/
 .cxx/
 .DS_Store
-/github-packages.properties
 *.jks
 *.keystore
+
+/app/vrock-license.properties

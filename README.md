@@ -1,10 +1,10 @@
 # VRock Navigation Example
 
-A standalone Android app that consumes VRock Navigation SDK 0.1.4 as Maven packages. It uses a Compose launcher and four SDK navigation integrations for the same demo route.
+A standalone Android app that consumes VRock Navigation SDK 0.1.5 as Maven packages. It uses a Compose launcher and four SDK navigation integrations for the same demo route.
 
 ## Quick start
 
-Install Android SDK Platform 37.2. Gradle downloads the SDK from the public VRock Maven repository on GitHub Pages. Downloads are anonymous.
+Install Android SDK Platform 37.2 and use JDK 25 for the Gradle daemon. The project includes the Gradle wrapper. Gradle downloads the SDK from the public VRock Maven repository on GitHub Pages. Downloads are anonymous.
 
 Clone the example, open it in Android Studio, sync Gradle and run the **debug** variant. To build from the command line:
 
@@ -14,7 +14,7 @@ cd vrock-navigation-example-android
 ./gradlew :app:assembleDebug
 ```
 
-The sample targets debug evaluation. Release apps need a separately configured VRock activation key.
+Use the debug build to evaluate the SDK without activation. See [Build and test a signed release](#build-and-test-a-signed-release) for release setup.
 
 To test a local SDK checkout, publish it with `./gradlew publishAllPublicationsToLocalSdkRepository` in the SDK directory, then build this example with an explicit Maven repository path:
 
@@ -44,7 +44,7 @@ For Compose and XML, the host can update colors and visibility during a trip. Fo
 
 ## Plan your own route
 
-Open **Navigation colors** to edit the palette with hex colors and save it across app launches. All four modes use that palette.
+Open **Navigation colors** to edit the palette with a visual color picker and save it across app launches. All four modes use that palette.
 
 Select **OSRM** (with MapLibre) or **Google** (Google Routes and Google Maps). The planner opens in Buffalo, New York. Tap the map to add points. The first point is the start, the last is the destination, and any points between them become waypoints in order. **Undo** removes the last point, **Clear** removes them all, and **Buffalo demo** loads the original sample points.
 
@@ -52,10 +52,10 @@ Use **Build route** to preview the route. Select **GPS** to follow the device po
 
 [app/secrets.properties](app/secrets.properties) documents the Google key setting. With `GOOGLE_API_KEY` empty, the example runs in OSRM mode and the Google start buttons stay disabled. To test Google in your own copy, set `GOOGLE_API_KEY` in that file and rebuild. Enable Maps SDK for Android and Routes API for the key. The Android app ID is `com.vrock.navigationexample`.
 
-## Try the changes in SDK 0.1.4
+## Try the changes in SDK 0.1.5
 
 1. Open **Map and trip controls**, select **Dark**, then save. The planner map changes theme. Start any of the four trip screens to see the themed navigation UI. Choose **Auto** to try a schedule using the device clock. The default dark hours are 19:00–07:00.
-2. Open **Navigation colors** to set an optional screen background. Leave it blank for the SDK default. Night mode changes the default map controls, and an explicitly customized button palette takes precedence.
+2. Open **Navigation colors** to set an optional screen background. Select **Theme default** in the color picker to restore the SDK default. Night mode changes the default map controls, and an explicitly customized button palette takes precedence.
 3. Turn off **Allow panning and show recenter** and start a trip. The navigation camera stays in follow mode.
 4. Turn on **Stop from app**. The SDK's **End trip** button is hidden and Back is disabled during active navigation. In **NavigationFragment**, tap **Stop from app** to call the SDK controller. The standalone **NavigationActivity** demonstrates the same API with a 20-second timer. Compose and XML use an app button to stop their own trip.
 
@@ -66,6 +66,7 @@ Use **Build route** to preview the route. Select **GPS** to follow the device po
 | **GPS** and **Tap to drive** are disabled | Add at least two points on the map or tap **Buffalo demo**. If Google is selected, configure its key or switch to OSRM. |
 | The route does not build | Check the device's internet connection and try **Build route** in the planner to check route calculation separately. For Google, check that Routes API is enabled for the configured key. |
 | Google does not load the map | Set `GOOGLE_API_KEY` in `app/secrets.properties`, enable Maps SDK for Android and rebuild the app. |
+| The app shows **Navigation license unavailable or invalid** | Check the activation key, application ID and SHA-256 fingerprint of the signing certificate. Rebuild and reinstall the signed release APK. |
 | GPS asks for permission or waits for a signal | Grant **Precise** location access and turn on location services. On an emulator, send a location near the chosen route from its location controls. |
 | Tap to drive waits for input | Once the trip screen opens, tap along the route to update the simulated position. |
 | **End trip** is hidden by your UI configuration | Keep a Back handler or offer a host button to end the trip. In the sample, Compose and XML return to the planner on Back, and the hosted screens end their trip on Back by default. If **Stop from app** is enabled, use the app button or wait for the standalone Activity timer. |
@@ -92,7 +93,7 @@ dependencies {
 
 [ExampleApplication.kt](app/src/main/java/com/vrock/navigationexample/ExampleApplication.kt) implements `NavigationEngineProvider` for the SDK's Activity and Fragment. Register it as `android:name=".ExampleApplication"` and declare `android.permission.INTERNET` in the [manifest](app/src/main/AndroidManifest.xml).
 
-The following method belongs inside `ExampleApplication`. The application defines `osrmRouting` with `OsrmRoutingProvider`, `googleRouting` with `GoogleRoutingProvider(BuildConfig.GOOGLE_API_KEY)`, and `license` with `ServerNavigationLicense(applicationContext)`. For Google, Gradle reads the key from the properties file described above and passes it to both `BuildConfig` for Routes and the manifest's `com.google.android.geo.API_KEY` entry for Maps.
+The following method belongs inside `ExampleApplication`. The application defines `osrmRouting` with `OsrmRoutingProvider`, `googleRouting` with `GoogleRoutingProvider(BuildConfig.GOOGLE_API_KEY)`, and `license` with `ServerNavigationLicense(applicationContext, activationKey = BuildConfig.VROCK_ACTIVATION_KEY)`. For Google, Gradle reads the key from the properties file described above and passes it to both `BuildConfig` for Routes and the manifest's `com.google.android.geo.API_KEY` entry for Maps.
 
 ```kotlin
 private fun googleOptions(config: NavigationLaunchConfig) = GoogleRouteOptions(
@@ -207,7 +208,7 @@ currentAppearance = currentAppearance.copy(
 )
 ```
 
-The sample's [PaletteSettings.kt](app/src/main/java/com/vrock/navigationexample/PaletteSettings.kt) shows how to parse `#RRGGBB` input and save colors across restarts with `SharedPreferences`.
+The sample's [PaletteSettings.kt](app/src/main/java/com/vrock/navigationexample/PaletteSettings.kt) shows how to convert HSV picker values into ARGB colors and save the palette across restarts with `SharedPreferences`.
 
 ### Configure light, dark and scheduled map themes
 
@@ -422,3 +423,17 @@ Open **Map and trip controls** and choose **Game radar** for Google Maps or MapL
 In the same settings, turn **Adaptive zoom** or **Show destination marker** on or off. Adaptive zoom follows vehicle speed while the camera follows the marker. To customize the finish marker in code, pass `DestinationMarkerStyle(backgroundColor = 0xFF5145B8.toInt(), sizeDp = 40)` to `NavigationAppearance.destinationMarker`. Activity and Fragment read it from the launch config. Compose and XML pass it to their renderers.
 
 In **Tap to drive**, speed depends on the distance and time between taps. After two seconds without a tap, speed returns to zero. Tap forward along the route, then pause to see the adaptive camera move closer again.
+
+## Build and test a signed release
+
+`./gradlew :app:assembleRelease` builds an unsigned APK in `app/build/outputs/apk/release/`. The example uses standard R8 optimization. Keep `optimization { enable = true }` without a custom `packageScope`. If an APK built with the old scoped settings crashes at startup with `IllegalAccessError`, rebuild and reinstall it.
+
+1. Choose the signing key you will use for the release APK.
+2. When issuing the VRock activation key, use the application ID `com.vrock.navigationexample` and the SHA-256 fingerprint of the certificate that will sign the installed APK.
+3. Create `app/vrock-license.properties` with the following entry. Git ignores this file.
+
+   ```properties
+   VROCK_ACTIVATION_KEY=your_activation_key
+   ```
+
+4. In Android Studio, use **Generate Signed Bundle / APK** to build the signed APK, then install it. Select **OSRM**, load **Buffalo demo**, then choose **Tap to drive**. The navigation screen should open with the route ready. An absent or invalid activation key allows the APK to build, but the SDK blocks release navigation. Debug builds run in demo mode.

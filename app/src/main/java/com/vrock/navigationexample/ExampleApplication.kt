@@ -14,7 +14,9 @@ import com.vrock.navigation.ui.view.NavigationProvider
 import okhttp3.OkHttpClient
 
 class ExampleApplication : Application(), NavigationEngineProvider {
-    private val license by lazy { ServerNavigationLicense(applicationContext) }
+    private val license by lazy {
+        ServerNavigationLicense(applicationContext, activationKey = BuildConfig.VROCK_ACTIVATION_KEY)
+    }
 
     private val osrmRouting by lazy {
         val client = OkHttpClient.Builder()

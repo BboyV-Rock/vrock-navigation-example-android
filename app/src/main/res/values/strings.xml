@@ -14,7 +14,7 @@
     <string name="back_to_demo">Back to demo</string>
     <string name="close_fragment_trip">Stop from app</string>
     <string name="palette_settings">Navigation colors</string>
-    <string name="palette_help">Enter colors as #RRGGBB. All four trip screens use the saved palette.</string>
+    <string name="palette_help">Tap an item to choose its color. All four trip screens use the saved palette.</string>
     <string name="save_palette">Save</string>
     <string name="cancel_palette">Cancel</string>
     <string name="reset_palette">Reset to defaults</string>
@@ -64,4 +64,9 @@
     <string name="destination_marker">Show destination marker</string>
     <string name="preview_route_dns">Could not resolve the routing server. Check your connection.</string>
     <string name="preview_route_timeout">The routing server timed out. Try again.</string>
+    <string name="palette_theme_default">Theme default</string>
+    <string name="palette_hue">Hue</string>
+    <string name="palette_saturation">Saturation</string>
+    <string name="palette_brightness">Brightness</string>
+    <string name="palette_apply_color">Apply color</string>
 </resources>

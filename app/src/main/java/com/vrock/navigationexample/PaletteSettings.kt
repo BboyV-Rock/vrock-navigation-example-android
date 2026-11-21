@@ -1,6 +1,7 @@
 package com.vrock.navigationexample
 
 import android.content.SharedPreferences
+import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -8,19 +9,22 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -28,7 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vrock.navigation.ui.NavigationColors
@@ -72,15 +75,7 @@ internal fun savePalette(preferences: SharedPreferences, colors: NavigationColor
     editor.apply()
 }
 
-private fun NavigationColors.hexValues() = ArrayList(PaletteColor.entries.map { field ->
-    field.read(this)?.let { "#" + (it and 0xFFFFFF).toString(16).uppercase().padStart(6, '0') }.orEmpty()
-})
-
-private fun parseHex(text: String): Int? {
-    val digits = text.trim().removePrefix("#")
-    if (digits.length != 6 || digits.any { it !in "0123456789abcdefABCDEF" }) return null
-    return digits.toInt(16) or 0xFF000000.toInt()
-}
+private fun NavigationColors.colorValues() = ArrayList(PaletteColor.entries.map { it.read(this) })
 
 @Composable
 internal fun PaletteSettings(
@@ -88,10 +83,20 @@ internal fun PaletteSettings(
     onCancel: () -> Unit,
     onSave: (NavigationColors) -> Unit,
 ) {
-    var values by rememberSaveable { mutableStateOf(colors.hexValues()) }
-    val parsed = values.map(::parseHex)
-    val valid = PaletteColor.entries.mapIndexed { index, field ->
-        parsed[index] != null || (field.optional && values[index].isBlank())
+    var values by rememberSaveable { mutableStateOf(colors.colorValues()) }
+    var editing by rememberSaveable { mutableStateOf<PaletteColor?>(null) }
+
+    editing?.let { field ->
+        ColorPickerDialog(
+            title = stringResource(field.label),
+            initialColor = values[field.ordinal],
+            onDismiss = { editing = null },
+            onSelect = { color ->
+                values = ArrayList(values).apply { set(field.ordinal, color) }
+                editing = null
+            },
+            useThemeDefault = field.optional,
+        )
     }
     Scaffold { padding ->
         Column(
@@ -105,10 +110,9 @@ internal fun PaletteSettings(
             ) {
                 Text(stringResource(R.string.palette_settings), style = MaterialTheme.typography.headlineSmall)
                 Button(
-                    enabled = valid.all { it },
                     onClick = {
                         val updated = PaletteColor.entries.foldIndexed(colors) { index, palette, field ->
-                            field.write(palette, parsed[index])
+                            field.write(palette, values[index])
                         }
                         onSave(updated)
                     },
@@ -117,32 +121,80 @@ internal fun PaletteSettings(
             Text(stringResource(R.string.palette_help))
             Row {
                 TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel_palette)) }
-                TextButton(onClick = { values = NavigationColors().hexValues() }) {
+                TextButton(onClick = { values = NavigationColors().colorValues() }) {
                     Text(stringResource(R.string.reset_palette))
                 }
             }
             PaletteColor.entries.forEachIndexed { index, field ->
-                OutlinedTextField(
-                    value = values[index],
-                    onValueChange = { value -> values = ArrayList(values).apply { set(index, value) } },
+                OutlinedButton(
+                    onClick = { editing = field },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(field.label)) },
-                    isError = !valid[index],
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
-                    trailingIcon = {
-                        val value = parsed[index]
-                        if (value != null) {
-                            Box(
-                                Modifier.size(24.dp).background(Color(value))
-                                    .border(1.dp, MaterialTheme.colorScheme.outline),
-                            )
-                        }
-                    },
-                )
+                ) {
+                    Text(stringResource(field.label), modifier = Modifier.weight(1f))
+                    val color = values[index]
+                    if (color == null) {
+                        Text(stringResource(R.string.palette_theme_default))
+                    } else {
+                        ColorSwatch(color, Modifier.size(26.dp))
+                    }
+                }
             }
         }
     }
+}
+
+@Composable
+private fun ColorPickerDialog(
+    title: String,
+    initialColor: Int?,
+    onDismiss: () -> Unit,
+    onSelect: (Int?) -> Unit,
+    useThemeDefault: Boolean,
+) {
+    val initialHsv = FloatArray(3).apply {
+        AndroidColor.colorToHSV(initialColor ?: AndroidColor.WHITE, this)
+    }
+    var hue by rememberSaveable { mutableFloatStateOf(initialHsv[0]) }
+    var saturation by rememberSaveable { mutableFloatStateOf(initialHsv[1]) }
+    var brightness by rememberSaveable { mutableFloatStateOf(initialHsv[2]) }
+    val color = AndroidColor.HSVToColor(floatArrayOf(hue, saturation, brightness))
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ColorSwatch(color, Modifier.fillMaxWidth().height(48.dp))
+                Text(stringResource(R.string.palette_hue))
+                Slider(value = hue, onValueChange = { hue = it }, valueRange = 0f..360f)
+                Text(stringResource(R.string.palette_saturation))
+                Slider(value = saturation, onValueChange = { saturation = it })
+                Text(stringResource(R.string.palette_brightness))
+                Slider(value = brightness, onValueChange = { brightness = it })
+                if (useThemeDefault) {
+                    TextButton(onClick = { onSelect(null) }) {
+                        Text(stringResource(R.string.palette_theme_default))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSelect(color) }) {
+                Text(stringResource(R.string.palette_apply_color))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel_palette)) }
+        },
+    )
+}
+
+@Composable
+private fun ColorSwatch(color: Int, modifier: Modifier) {
+    Box(modifier.background(Color(color)).border(1.dp, MaterialTheme.colorScheme.outline))
 }
 
 @Preview(showBackground = true, widthDp = 393, heightDp = 851)
