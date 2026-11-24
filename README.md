@@ -1,6 +1,6 @@
 # VRock Navigation Example
 
-A standalone Android app that consumes VRock Navigation SDK 0.1.5 as Maven packages. It uses a Compose launcher and four SDK navigation integrations for the same demo route.
+A standalone Android app that consumes VRock Navigation SDK 0.1.6 as Maven packages. It uses a Compose launcher and four SDK navigation integrations for the same demo route.
 
 ## Quick start
 
